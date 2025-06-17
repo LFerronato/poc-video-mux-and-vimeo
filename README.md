@@ -33,8 +33,7 @@ bun api
 ```
 
 2. Frontend:
-- Vimeo: `src-web/vimeo/index-vimeo.html`
-- MUX: `src-web/mux/index-mux.html`
+- POC UI: `http://localhost:8080/src-web/index.html`
 
 ## 📝 Features
 
