@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>POC - Video</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-50 min-h-screen p-8">
+  <div class="max-w-2xl mx-auto">
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <h1 class="text-2xl font-bold text-gray-800 mb-2">🎬 Upload Video</h1>
+      <p class="text-gray-600">Upload em chunks de 5MB com suporte a pausar/retomar</p>
+    </div>
+
+    <!-- Provider Selection -->
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+      <label for="providerSelect" class="block text-sm font-medium text-gray-700 mb-2">Selecione o Provider</label>
+      <select id="providerSelect" class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500">
+        <option value="vimeo">Vimeo</option>
+        <option value="mux">MUX</option>
+      </select>
+    </div>
+
+    <!-- Cache Info -->
+    <div id="cacheInfo" class="hidden mb-4"></div>
+
+    <!-- Upload Form -->
+    <div class="bg-white rounded-lg shadow p-6 mb-6">
+      <form id="uploadForm" class="space-y-4">
+        <!-- Video Name -->
+        <div>
+          <label for="videoName" class="block text-sm font-medium text-gray-700 mb-1">Nome do Vídeo</label>
+          <input type="text" id="videoName" required
+            class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <!-- Upload Area -->
+        <div id="uploadArea"
+          class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400">
+          <div class="text-4xl mb-2">📁</div>
+          <p class="text-gray-600">Clique ou arraste um arquivo de vídeo</p>
+          <input type="file" id="videoFileInput" accept="video/*" class="hidden">
+        </div>
+
+        <!-- File Info -->
+        <div id="fileInfo" class="hidden bg-gray-50 rounded-lg p-4 text-sm">
+          <div class="grid grid-cols-2 gap-2">
+            <div>Nome:</div>
+            <div id="fileName" class="font-mono"></div>
+            <div>Tamanho:</div>
+            <div id="fileSize" class="font-mono"></div>
+            <div>Chunks:</div>
+            <div id="chunkCount" class="font-mono"></div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex gap-2 justify-center">
+          <button type="submit" id="uploadBtn" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700" disabled>
+            🚀 Iniciar Upload
+          </button>
+          <button type="button" id="pauseBtn"
+            class="hidden bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600">
+            ⏸️ Pausar
+          </button>
+          <button type="button" id="resumeBtn"
+            class="hidden bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">
+            ▶️ Retomar
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Progress Section -->
+    <div id="progressContainer" class="hidden bg-white rounded-lg shadow p-6 mb-6">
+      <h3 class="font-medium text-gray-800 mb-4">📊 Progresso</h3>
+
+      <!-- Progress Bar -->
+      <div class="mb-4">
+        <div class="flex justify-between text-sm mb-1">
+          <span>Progresso</span>
+          <span id="progressPercentage">0%</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2">
+          <div id="progressFill" class="h-full bg-blue-600 rounded-full transition-all" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="grid grid-cols-3 gap-4 text-center text-sm">
+        <div>
+          <div id="uploadedSize" class="font-bold text-blue-600">0MB</div>
+          <div class="text-gray-600">Enviado</div>
+        </div>
+        <div>
+          <div id="uploadSpeed" class="font-bold text-green-600">0 MB/s</div>
+          <div class="text-gray-600">Velocidade</div>
+        </div>
+        <div>
+          <div id="eta" class="font-bold text-purple-600">--</div>
+          <div class="text-gray-600">Tempo Restante</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Messages -->
+    <div id="statusContainer" class="hidden">
+      <div id="statusDiv" class="rounded-lg p-4 text-center"></div>
+    </div>
+
+    <!-- Logs Area -->
+    <div id="logsContainer" class="hidden mt-6 bg-white rounded-lg shadow p-4">
+      <h3 class="font-medium text-gray-800 mb-3">📝 Logs</h3>
+      <div id="logsContent" class="bg-gray-50 rounded p-3 font-mono text-sm h-48 overflow-y-auto space-y-1">
+        <!-- Logs serão inseridos aqui -->
+      </div>
+    </div>
+
+    <!-- Connection Status -->
+    <div id="connectionStatus" class="hidden fixed top-4 right-4 px-4 py-2 rounded-lg shadow">
+      <span id="connectionText"></span>
+    </div>
+
+    <!-- Video States -->
+    <div id="videoStates" class="hidden mt-6">
+      <div class="flex items-center justify-center space-x-4 text-sm">
+        <div id="stateUploading" class="flex items-center">
+          <div class="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
+          <span>Uploading</span>
+        </div>
+        <div class="text-gray-400">→</div>
+        <div id="stateProcessing" class="flex items-center text-gray-400">
+          <div class="w-3 h-3 bg-gray-300 rounded-full mr-2"></div>
+          <span>Processing</span>
+        </div>
+        <div class="text-gray-400">→</div>
+        <div id="stateReady" class="flex items-center text-gray-400">
+          <div class="w-3 h-3 bg-gray-300 rounded-full mr-2"></div>
+          <span>Ready</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Separador -->
+    <hr class="my-8 border-gray-300">
+
+    <!-- Video Section -->
+    <div id="videoSection" class="mt-8">
+      <h3 class="font-medium text-gray-800 mb-4">🎬 Player</h3>
+
+      <!-- Vimeo Section -->
+      <div id="vimeoSection" class="mb-4">
+        <label for="videoIdInputVimeo" class="block text-sm font-medium text-gray-700 mb-1">ID do Vídeo (Vimeo)</label>
+        <div class="flex gap-2">
+          <input type="text" id="videoIdInputVimeo" placeholder="Cole aqui o ID do vídeo após o upload"
+            class="flex-1 px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500">
+          <button type="button" id="loadPlayerBtnVimeo"
+            class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
+            Carregar Player
+          </button>
+        </div>
+      </div>
+
+      <!-- MUX Section -->
+      <div id="muxSection" class="mb-4">
+        <label for="videoIdInputMux" class="block text-sm font-medium text-gray-700 mb-1">ID do Vídeo (MUX)</label>
+        <div class="flex gap-2">
+          <input type="text" id="videoIdInputMux" placeholder="Cole aqui o ID do vídeo após o upload"
+            class="flex-1 px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500">
+          <button type="button" id="loadPlayerBtnMux"
+            class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700">
+            Carregar Player
+          </button>
+        </div>
+      </div>
+
+      <!-- Player Container -->
+      <div id="playerContainer" class="aspect-video bg-black rounded-lg"></div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script type="module" src="script.js"></script>
+  <script type="module" src="upload-chunked.js"></script>
+  <script type="module" src="mux/mux.viewer.js"></script>
+  <script type="module" src="vimeo/vimeo.viewer.js"></script>
+</body>
+
+</html>
